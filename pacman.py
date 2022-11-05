@@ -47,8 +47,10 @@ from util import nearestPoint
 from util import manhattanDistance
 import util, layout
 import sys, types, time, random, os
+import threading
 
- ###################################################
+
+###################################################
 # YOUR INTERFACE TO THE PACMAN WORLD: A GameState #
 ###################################################
 
@@ -472,7 +474,6 @@ def parseAgentArgs(str):
             key,val = p, 1
         opts[key] = val
     return opts
-
 def readCommand( argv ):
     """
     Processes the command used to run pacman from the command line.
@@ -523,6 +524,8 @@ def readCommand( argv ):
                       help='Turns on exception handling and timeouts during games', default=False)
     parser.add_option('--timeout', dest='timeout', type='int',
                       help=default('Maximum length of time an agent can spend computing in a single game'), default=30)
+    parser.add_option('--competition', dest='competition',
+                      help=default('Shows all PacMan algorithms competing with each other'), default=None)
 
     options, otherjunk = parser.parse_args(argv)
     if len(otherjunk) != 0:
@@ -545,7 +548,17 @@ def readCommand( argv ):
         if 'numTraining' not in agentOpts: agentOpts['numTraining'] = options.numTraining
     pacman = pacmanType(**agentOpts) # Instantiate Pacman with agentArgs
     args['pacman'] = pacman
+    print pacman
 
+    if options.competition is not None:
+        pacmanType = loadAgent("SearchAgent", False)
+        competingAlgorithms = options.competition.split(",")
+        pacMansList = []
+        for algorithm in competingAlgorithms:
+            agentOpts = {"fn":algorithm}
+            competitionPacMans = pacmanType(**agentOpts)  # Instantiate Competition with competitionArgs
+            pacMansList.append(competitionPacMans)
+        args['competitionPacMans'] = pacMansList
     # Don't display training games
     if 'numTrain' in agentOpts:
         options.numQuiet = int(agentOpts['numTrain'])
@@ -625,45 +638,70 @@ def replayGame( layout, actions, display ):
 
     display.finish()
 
-def runGames( layout, pacman, ghosts, display, numGames, record, numTraining = 0, catchExceptions=False, timeout=30 ):
+def runGame( layout, pacman, ghosts, display, numGames, record, numTraining = 0, catchExceptions=False, timeout=30):
     import __main__
     __main__.__dict__['_display'] = display
 
     rules = ClassicGameRules(timeout)
     games = []
 
-    for i in range( numGames ):
+    for i in range(numGames):
         beQuiet = i < numTraining
         if beQuiet:
-                # Suppress output and graphics
+            # Suppress output and graphics
             import textDisplay
             gameDisplay = textDisplay.NullGraphics()
             rules.quiet = True
         else:
             gameDisplay = display
             rules.quiet = False
-        game = rules.newGame( layout, pacman, ghosts, gameDisplay, beQuiet, catchExceptions)
+        game = rules.newGame(layout, pacman, ghosts, gameDisplay, beQuiet, catchExceptions)
         game.run()
         if not beQuiet: games.append(game)
 
         if record:
             import time, cPickle
-            fname = ('recorded-game-%d' % (i + 1)) +  '-'.join([str(t) for t in time.localtime()[1:6]])
+            fname = ('recorded-game-%d' % (i + 1)) + '-'.join([str(t) for t in time.localtime()[1:6]])
             f = file(fname, 'w')
             components = {'layout': layout, 'actions': game.moveHistory}
             cPickle.dump(components, f)
             f.close()
 
-    if (numGames-numTraining) > 0:
+    if (numGames - numTraining) > 0:
         scores = [game.state.getScore() for game in games]
         wins = [game.state.isWin() for game in games]
-        winRate = wins.count(True)/ float(len(wins))
+        winRate = wins.count(True) / float(len(wins))
         print 'Average Score:', sum(scores) / float(len(scores))
         print 'Scores:       ', ', '.join([str(score) for score in scores])
         print 'Win Rate:      %d/%d (%.2f)' % (wins.count(True), len(wins), winRate)
-        print 'Record:       ', ', '.join([ ['Loss', 'Win'][int(w)] for w in wins])
-
+        print 'Record:       ', ', '.join([['Loss', 'Win'][int(w)] for w in wins])
     return games
+
+
+def printStuff(layout, pacman, ghosts, display, numGames, record):
+    print layout, pacman, ghosts, display, numGames, record
+def runCompetition(layout, pacman, ghosts, display, numGames, record, numTraining = 0, catchExceptions=False, timeout=30, competitionPacMans=None):
+    # for algorithm in competition:
+    # trying to generate multiple pacmans
+    # noKeyboard = False
+    # pacmanType = loadAgent(pacman, noKeyboard)
+    # agentOpts =  {"bfs":1}
+    # pacman = pacmanType(**agentOpts)  # Instantiate Pacman with agentArgs
+
+    for competitor in competitionPacMans:
+        t1 = threading.Thread(target=runGame, args=(layout,competitor,ghosts,display, numGames, record, numTraining, catchExceptions, timeout))
+
+    t1.start()
+    t1.join()
+    pass
+
+
+def runGames( layout, pacman, ghosts, display, numGames, record, numTraining = 0, catchExceptions=False, timeout=30, competitionPacMans=None):
+    if competitionPacMans is None:
+        runGame(layout, pacman, ghosts, display, numGames, record, numTraining, catchExceptions, timeout)
+    else:
+        runCompetition(layout, pacman, ghosts, display, numGames, record, numTraining, catchExceptions, timeout, competitionPacMans)
+
 
 if __name__ == '__main__':
     """
