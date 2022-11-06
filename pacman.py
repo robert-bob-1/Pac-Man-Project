@@ -46,7 +46,7 @@ from game import Actions
 from util import nearestPoint
 from util import manhattanDistance
 import util, layout
-import sys, types, time, random, os
+import sys, types, time, random, os, operator
 import threading
 
 
@@ -700,38 +700,30 @@ def runCompetition(layout, pacman, ghosts, display, numGames, record, numTrainin
         (games, scoreTemp) = runGame(layout, competitor, ghosts, display, numGames, record, numTraining, catchExceptions, timeout)
         scoresList[competingAlgorithms[index]] = scoreTemp
 
-    bestScore = bestWinrate = 0
-    bestScoreAlgorithm = []
-    bestWinrateAlgorithm = []
+    scoresDict = {}
+    winratesDict = {}
 
-    #scores list has winrate on index 0 and averageScore on index 1
     for (algorithm, scoreTemp) in scoresList.items():
-        if scoreTemp[0] > bestWinrate:
-            newList = [algorithm]
-            bestWinrateAlgorithm = newList
-            bestWinrate = scoreTemp[0]
-        elif scoreTemp[0] == bestWinrate:
-            bestWinrateAlgorithm.append(algorithm)
+        scoresDict[algorithm] = scoreTemp[1]
+        winratesDict[algorithm] = scoreTemp[0]
 
-        if scoreTemp[1] > bestScore:
-            newList = [algorithm]
-            bestScoreAlgorithm = newList
-            bestScore = scoreTemp[1]
-        elif scoreTemp[1] == bestScore:
-            bestScoreAlgorithm.append(algorithm)
+    sortedScores = sorted(scoresDict.items(), key=lambda kv: kv[1], reverse=True)
+    sortedWinrates = sorted(scoresDict.items(), key=lambda kv: kv[1], reverse=True)
 
     print "\n\n"
-    print "Best score was ", bestScore, " "
-    print " of algorithm/s:"
-    for algorithm in bestScoreAlgorithm:
-        print " ", algorithm
+    print "Best score was ", sortedScores[0][1], " "
+    print " and the ranking is:"
+    index = 0
+    for result in sortedScores:
+        print " ", result[0], " ", result[1]
 
-    print "\n"
-    print "Best winrate was ", bestWinrate, " "
-    print " of algorithm/s:"
-    for algorithm in bestWinrateAlgorithm:
-        print " ", algorithm
-    pass
+    print "\n\n"
+    print "Best winrate was ", sortedWinrates[0][1], " "
+    print " and the ranking is:"
+    index = 0
+    for result in sortedWinrates:
+        print " ", result[0], " ", result[1]
+
 
 
 def runGames( layout, pacman, ghosts, display, numGames, record, numTraining = 0, catchExceptions=False, timeout=30, competitionPacMans=None, competingAlgorithms=None):
