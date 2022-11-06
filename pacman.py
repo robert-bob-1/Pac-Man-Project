@@ -553,6 +553,7 @@ def readCommand( argv ):
     if options.competition is not None:
         pacmanType = loadAgent("SearchAgent", False)
         competingAlgorithms = options.competition.split(",")
+        args['competingAlgorithms'] = competingAlgorithms
         pacMansList = []
         for algorithm in competingAlgorithms:
             agentOpts = {"fn":algorithm}
@@ -667,40 +668,77 @@ def runGame( layout, pacman, ghosts, display, numGames, record, numTraining = 0,
             cPickle.dump(components, f)
             f.close()
 
+    scoreStruct = []
     if (numGames - numTraining) > 0:
         scores = [game.state.getScore() for game in games]
         wins = [game.state.isWin() for game in games]
         winRate = wins.count(True) / float(len(wins))
-        print 'Average Score:', sum(scores) / float(len(scores))
+
+        averageScore = sum(scores) / float(len(scores))
+        print 'Average Score:', averageScore
         print 'Scores:       ', ', '.join([str(score) for score in scores])
         print 'Win Rate:      %d/%d (%.2f)' % (wins.count(True), len(wins), winRate)
         print 'Record:       ', ', '.join([['Loss', 'Win'][int(w)] for w in wins])
-    return games
+        scoreStruct.extend([winRate, averageScore])
+    return (games, scoreStruct)
 
 
 def printStuff(layout, pacman, ghosts, display, numGames, record):
     print layout, pacman, ghosts, display, numGames, record
-def runCompetition(layout, pacman, ghosts, display, numGames, record, numTraining = 0, catchExceptions=False, timeout=30, competitionPacMans=None):
-    # for algorithm in competition:
-    # trying to generate multiple pacmans
-    # noKeyboard = False
-    # pacmanType = loadAgent(pacman, noKeyboard)
-    # agentOpts =  {"bfs":1}
-    # pacman = pacmanType(**agentOpts)  # Instantiate Pacman with agentArgs
+def runCompetition(layout, pacman, ghosts, display, numGames, record, numTraining = 0, catchExceptions=False, timeout=30, competitionPacMans=None, competingAlgorithms=None):
+    # threadList = []
+    # for competitor in competitionPacMans:
+    #     t1 = threading.Thread(target=runGame, args=(layout,competitor,ghosts,display, numGames, record, numTraining, catchExceptions, timeout))
+    #     threadList.append(t1)
+    #
+    # for thread in threadList:
+    #     thread.start()
+    #     thread.join()
 
-    for competitor in competitionPacMans:
-        t1 = threading.Thread(target=runGame, args=(layout,competitor,ghosts,display, numGames, record, numTraining, catchExceptions, timeout))
+    scoresList = {}
+    for index, competitor in enumerate(competitionPacMans):
+        (games, scoreTemp) = runGame(layout, competitor, ghosts, display, numGames, record, numTraining, catchExceptions, timeout)
+        scoresList[competingAlgorithms[index]] = scoreTemp
 
-    t1.start()
-    t1.join()
+    bestScore = bestWinrate = 0
+    bestScoreAlgorithm = []
+    bestWinrateAlgorithm = []
+
+    #scores list has winrate on index 0 and averageScore on index 1
+    for (algorithm, scoreTemp) in scoresList.items():
+        if scoreTemp[0] > bestWinrate:
+            newList = [algorithm]
+            bestWinrateAlgorithm = newList
+            bestWinrate = scoreTemp[0]
+        elif scoreTemp[0] == bestWinrate:
+            bestWinrateAlgorithm.append(algorithm)
+
+        if scoreTemp[1] > bestScore:
+            newList = [algorithm]
+            bestScoreAlgorithm = newList
+            bestScore = scoreTemp[1]
+        elif scoreTemp[1] == bestScore:
+            bestScoreAlgorithm.append(algorithm)
+
+    print "\n\n"
+    print "Best score was ", bestScore, " "
+    print " of algorithm/s:"
+    for algorithm in bestScoreAlgorithm:
+        print " ", algorithm
+
+    print "\n"
+    print "Best winrate was ", bestWinrate, " "
+    print " of algorithm/s:"
+    for algorithm in bestWinrateAlgorithm:
+        print " ", algorithm
     pass
 
 
-def runGames( layout, pacman, ghosts, display, numGames, record, numTraining = 0, catchExceptions=False, timeout=30, competitionPacMans=None):
+def runGames( layout, pacman, ghosts, display, numGames, record, numTraining = 0, catchExceptions=False, timeout=30, competitionPacMans=None, competingAlgorithms=None):
     if competitionPacMans is None:
         runGame(layout, pacman, ghosts, display, numGames, record, numTraining, catchExceptions, timeout)
     else:
-        runCompetition(layout, pacman, ghosts, display, numGames, record, numTraining, catchExceptions, timeout, competitionPacMans)
+        runCompetition(layout, pacman, ghosts, display, numGames, record, numTraining, catchExceptions, timeout, competitionPacMans, competingAlgorithms)
 
 
 if __name__ == '__main__':
