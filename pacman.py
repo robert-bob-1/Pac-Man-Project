@@ -713,16 +713,19 @@ def runCompetition(layout, pacman, ghosts, display, numGames, record, numTrainin
     print "\n\n"
     print "Best score was ", sortedScores[0][1], " "
     print " and the ranking is:"
-    index = 0
+    index = 1
     for result in sortedScores:
-        print " ", result[0], " ", result[1]
+        print " ", index, result[0], " ", result[1]
+        index+=1
 
     print "\n\n"
     print "Best winrate was ", sortedWinrates[0][1], " "
     print " and the ranking is:"
-    index = 0
+    index = 1
     for result in sortedWinrates:
-        print " ", result[0], " ", result[1]
+        print " ", index, result[0], " ", result[1]
+        index+=1
+
 
 
 
