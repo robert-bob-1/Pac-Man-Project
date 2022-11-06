@@ -18,9 +18,7 @@ Pacman agents (in searchAgents.py).
 """
 
 import util
-from game import Directions
-from pacman import PacmanRules
-
+import math
 
 class SearchProblem:
     """
@@ -73,8 +71,7 @@ def tinyMazeSearch(problem):
     from game import Directions
     s = Directions.SOUTH
     w = Directions.WEST
-    return [s, s, w, s, w, w, s, w]
-
+    return  [s, s, w, s, w, w, s, w]
 
 def depthFirstSearch(problem):
     """
@@ -91,103 +88,72 @@ def depthFirstSearch(problem):
     print "Start's successors:", problem.getSuccessors(problem.getStartState())
     """
     "*** YOUR CODE HERE ***"
-
-    stack = util.Stack()
-    stack.push((problem.getStartState(), None, None))
-    explored = []
-    path = []
-
-    currentNode = None
-
-    while not stack.isEmpty():
-        currentNode = stack.pop()
-        (node, parent, direction) = currentNode
-        if problem.isGoalState(node):
-            break
-
-        if node not in explored:
-            explored.append(node)
-            succ = problem.getSuccessors(node)
-            for node in succ:
-                (nodeLocation, direction, cost) = node
-                newNode = (nodeLocation, currentNode, direction)
-                stack.push(newNode)
-    # explored.reverse()
-    # while len(explored):
-    #     print "Elemente ", explored.pop()[0]
-    while currentNode[1] is not None:
-        direction = currentNode[2]
-        path.append(direction)
-        currentNode = currentNode[1]
-    path.reverse()
-    return path
-    # util.raiseNotDefined()
-
+    start = problem.getStartState()
+    c = problem.getStartState()
+    exploredState = []
+    exploredState.append(start)
+    states = util.Stack()
+    stateTuple = (start, [])
+    states.push(stateTuple)
+    while not states.isEmpty() and not problem.isGoalState(c):
+        state, actions = states.pop()
+        exploredState.append(state)
+        successor = problem.getSuccessors(state)
+        for i in successor:
+            coordinates = i[0]
+            if not coordinates in exploredState:
+                c = i[0]
+                direction = i[1]
+                states.push((coordinates, actions + [direction]))
+    return actions + [direction]
+    util.raiseNotDefined()
 
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
     "*** YOUR CODE HERE ***"
+    start = problem.getStartState()
     queue = util.Queue()
-    queue.push((problem.getStartState(), None, None))
     explored = []
-    path = []
-
-    currentNode = None
-
+    explored.append(start)
+    queue.push((start, []))
     while not queue.isEmpty():
-        currentNode = queue.pop()
-        (node, parent, direction) = currentNode
-        if problem.isGoalState(node):
-            break
+        current, action = queue.pop()
+        if problem.isGoalState(current):
+            return action
+        successors = problem.getSuccessors(current)
+        for i in successors:
+            coordinates = i[0]
+            if not coordinates in explored:
+                direction = i[1]
+                explored.append(coordinates)
+                queue.push((coordinates, action + [direction]))
 
-        if node not in explored:
-            explored.append(node)
-            succ = problem.getSuccessors(node)
-            for node in succ:
-                (nodeLocation, direction, cost) = node
-                newNode = (nodeLocation, currentNode, direction,)
-                queue.push(newNode)
-    # explored.reverse()
-    # while len(explored):
-    #     print "Elemente ", explored.pop()[0]
-    while currentNode[1] is not None:
-        direction = currentNode[2]
-        path.append(direction)
-        currentNode = currentNode[1]
-    path.reverse()
-    return path
+    return action
+    util.raiseNotDefined()
 
 
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
     "*** YOUR CODE HERE ***"
-    priorityQueue = util.PriorityQueue()
-    priorityQueue.push((problem.getStartState(), None, None, 0), 0)
-    explored = []
-    path = []
-
-    currentNode = None
-
-    while not priorityQueue.isEmpty():
-        currentNode = priorityQueue.pop()
-        (node, parent, direction, cost) = currentNode
-        if problem.isGoalState(node):
-            break
-
-        if node not in explored:
-            explored.append(node)
-            succ = problem.getSuccessors(node)
-            for node in succ:
-                (nodeLocation, direction, nextCost) = node
-                newNode = (nodeLocation, currentNode, direction, cost + nextCost)
-                priorityQueue.update(newNode, newNode[3])
-
-    while currentNode[1] is not None:
-        direction = currentNode[2]
-        path.append(direction)
-        currentNode = currentNode[1]
-    path.reverse()
-    return path
+    start = problem.getStartState()
+    exploredState = []
+    states = util.PriorityQueue()
+    states.push((start, []), 0)
+    while not states.isEmpty():
+        state, actions = states.pop()
+        if problem.isGoalState(state):
+            return actions
+        if state not in exploredState:
+            successors = problem.getSuccessors(state)
+            for succ in successors:
+                coordinates = succ[0]
+                if coordinates not in exploredState:
+                    directions = succ[1]
+                    newCost = actions + [directions]
+                    states.push((coordinates, actions + [directions]), problem.getCostOfActions(newCost))
+        exploredState.append(state)
+    return actions
+    util.raiseNotDefined()
 
 
 def nullHeuristic(state, problem=None):
@@ -196,7 +162,6 @@ def nullHeuristic(state, problem=None):
     goal in the provided SearchProblem.  This heuristic is trivial.
     """
     return 0
-
 
 def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
@@ -221,9 +186,126 @@ def aStarSearch(problem, heuristic=nullHeuristic):
                     states.push((coordinates, actions + [directions]), nCost)
         exploredState.append(state)
     return
+    util.raiseNotDefined()
+
+def get_succ_in_direction(direction, successors):
+    for succ in successors:
+        if succ[1] == direction:
+            return succ
+    return ((0,0), 'No', 0)
+
+def directional_search(problem):
+    start = problem.getStartState()
+    explored = []
+    action = []
+    explored.append(start)
+    current = start
+    states = util.Stack()
+    states.push((start, []))
+    while not problem.isGoalState(current):
+        successors = problem.getSuccessors(current)
+        succ = get_succ_in_direction('West', successors)
+        if (not (succ[0] in explored)) and (succ[1] != 'No'):
+            action = action + [succ[1]]
+            explored.append(current)
+            current = succ[0]
+            states.push((current, action))
+        else:
+            succ = get_succ_in_direction('East', successors)
+            if (not (succ[0] in explored)) and (succ[1] != 'No'):
+                action = action + [succ[1]]
+                explored.append(current)
+                current = succ[0]
+                states.push((current, action))
+            else:
+                succ = get_succ_in_direction('North', successors)
+                if (not (succ[0] in explored)) and (succ[1] != 'No'):
+                    action = action + [succ[1]]
+                    explored.append(current)
+                    current = succ[0]
+                    states.push((current, action))
+                else:
+                    succ = get_succ_in_direction('South', successors)
+                    if (not (succ[0] in explored)) and (succ[1] != 'No'):
+                        action = action + [succ[1]]
+                        explored.append(current)
+                        current = succ[0]
+                        states.push((current, action))
+                    else:
+                        current, action = states.pop()
+    return action
+
+def reconstruct_path(s):
+    total_path = []
+    while s['action'] != None:
+        total_path.append(s['action'])
+        s = s['parent']
+    total_path.reverse()
+    return total_path
+
+def c(a, b):
+    return math.sqrt(((a[0] - b[0]) * (a[0] - b[0])) + ((a[1] - b[1]) * (a[1] - b[1])))
+
+def update_vertex(s, neighbor):
+    if s['action'] == neighbor['action']:
+        if s['parent']['gScore'] + c(s['parent']['state'], neighbor['state']) < neighbor['gScore'] :
+            neighbor['gScore'] = s['parent']['gScore'] + c(s['parent']['state'], neighbor['state'])
+            neighbor['parent'] = s
+    else :
+        if s['gScore'] + c(s['state'], neighbor['state']) < neighbor['gScore'] :
+            neighbor['gScore'] = s['gScore'] + c(s['state'], neighbor['state'])
+            neighbor['parent'] = s
+
+
+def thetaStarSearch(problem, heuristic=nullHeuristic):
+    start = problem.getStartState()
+    node = { 'state' : start, 'action' : None, 'cost' : 0, 'gScore' : 0, 'parent' : start}
+    open = util.PriorityQueue()
+    open.push((node), (node['gScore'] + heuristic(node['state'])))
+    closed = []
+
+    while not open.isEmpty():
+        s= open.pop()
+        if problem.isGoalState(s['state']):
+            return reconstruct_path(s)
+        closed.append(s['state'])
+        successors = problem.getSuccessors(s['state'])
+        for succ in successors:
+            neighbor = {'state': succ[0], 'action': succ[1], 'cost': succ[2], 'gScore': 0, 'parent': s}
+            if neighbor['state'] not in closed:
+                update_vertex(s, neighbor)
+                open.update(neighbor, neighbor['gScore'] + heuristic(neighbor))
+    return None
+
+
+
+def longest_search(problem):
+    start = problem.getStartState()
+    longest = {'action': [], 'cost': 0}
+    node = {'state': start, 'actions': [], 'cost': 0, 'explored': [start]}
+    stack = util.Stack()
+    stack.push(node)
+    while not stack.isEmpty():
+        node= stack.pop()
+        if problem.isGoalState(node['state']):
+            if node['cost'] > longest['cost']:
+                longest['action'] = node['actions']
+                longest['cost'] = node['cost']
+        successors = problem.getSuccessors(node['state'])
+        for succ in successors:
+            if succ[0] not in node['explored']:
+                newNdoe = {'state': succ[0], 'actions': node['actions'] + [succ[1]], 'cost': node['cost'] + succ[2],
+                                   'explored': node['explored'] + [succ[0]]}
+                stack.push(newNdoe)
+    return longest['action']
+    util.raiseNotDefined()
+
 
 # Abbreviations
 bfs = breadthFirstSearch
 dfs = depthFirstSearch
 astar = aStarSearch
 ucs = uniformCostSearch
+ls = longest_search
+ds = directional_search
+tstar = thetaStarSearch

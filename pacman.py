@@ -708,7 +708,7 @@ def runCompetition(layout, pacman, ghosts, display, numGames, record, numTrainin
         winratesDict[algorithm] = scoreTemp[0]
 
     sortedScores = sorted(scoresDict.items(), key=lambda kv: kv[1], reverse=True)
-    sortedWinrates = sorted(scoresDict.items(), key=lambda kv: kv[1], reverse=True)
+    sortedWinrates = sorted(winratesDict.items(), key=lambda kv: kv[1], reverse=True)
 
     print "\n\n"
     print "Best score was ", sortedScores[0][1], " "
